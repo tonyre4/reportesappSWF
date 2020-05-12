@@ -1,0 +1,201 @@
+from xlsxwriter import *
+import datetime
+import os
+import sys
+from datetime import date
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog
+from tkinter import messagebox
+
+class App:
+    def __init__(me):
+        me.today = date.today()
+        #DEBUG
+        #me.args = sys.argv
+        #me.folderpath = me.args[1]
+        #DEFINED
+        me.setWidgets()
+        #me.readData(me.folderpath)
+        #me.makeRep(me.dirdata)
+    #######
+    #GUI
+    #######
+    def g(me,w,c,r):
+        w.grid(column=c,row=r)
+
+    def browsefunc(me,ent,mode):
+        if mode==0:
+            filename = filedialog.askopenfilename()
+        if mode==1:
+            filename = filedialog.askdirectory() + "/"
+    
+        ent.delete(0,tk.END)
+        ent.insert(0,filename)
+
+    def setWidgets(me):
+        me.root = tk.Tk()
+        #Titulo
+        me.root.title("Generador de reportes - BETA")
+        #root.iconbitmap("dmm.ico")
+        me.root.resizable(False, False)
+        
+        #Widgets
+        me.entrycsv = ttk.Entry(me.root,width=100)
+        me.excsv = tk.Button(me.root,text="...",command= lambda: me.browsefunc(me.entrycsv,1))
+        me.pathsal = ttk.Entry(me.root,width=100)
+        me.nombreRep = ttk.Entry(me.root,width=100)
+        me.nombreRep.delete(0,tk.END)
+        me.nombreRep.insert(0,"Reporte_" + me.today.strftime("%d_%m_%Y") + ".xlsx")
+        me.pathsalb = tk.Button(me.root,text="...",command= lambda: me.browsefunc(me.pathsal,1))
+        me.bsol = tk.Button(me.root,text="Generar",command=lambda:me.readData(me.entrycsv.get()))
+    
+        #Packing
+        me.g(tk.Label(me.root, text="Elige archivo csv:"),0,0)
+        me.g(me.entrycsv,0,1)
+        me.g(me.excsv,1,1)
+        me.g(tk.Label(me.root, text="Elige Nombre del reporte"),0,2)
+        me.g(me.nombreRep,0,3)
+        me.g(tk.Label(me.root, text="Elige carpeta de destino:"),0,4)
+        me.g(me.pathsal,0,5)
+        me.g(me.pathsalb,1,5)
+        me.g(me.bsol,1,6)
+    
+        messagebox.showinfo("Atencion!", "Esto es una version Beta por lo que no se garantiza un funcionamiento optimo")
+        me.root.mainloop()
+
+    def getFolderpath(me):
+        pass
+
+    #########
+    #Analisis
+    #########
+    def readData(me,path):
+        files = sorted(os.listdir(path))
+        data = []
+        for f in files:
+            name = f.split(".")[0]
+            dats = name.split("_")
+            eig = dats[0]
+            thr = dats[1]
+            date = dats[2]
+
+            with open(path+f,"r") as ff:
+                for l in ff:
+                    vals = []
+                    for ll in l.split(","):
+                        if ll=="1":
+                            vals.append(1)
+                        else:
+                            vals.append(0)
+
+            data.append({"wt": eig + "." + thr, "date": date, "vals":vals})
+        me.dirdata = data
+        me.makeRep()
+
+    def getColor(me,path):
+        with open(path, "r") as file:
+            first_line = file.readline()
+        return first_line.replace("\n","")
+    #########
+    ##DBquery
+    #########
+    def getbyDate(me,date):
+        pass
+    def getbyWt(me,date):
+        pass
+
+    #######
+    #Report
+    #######
+    def makeRep(me):
+        data = me.dirdata
+        qs = ["Color louvers PVC/tela",
+              "Color de inserto de valance",
+              "Color de inserto retorno",
+              "Ponchado parte alta louver en 'S'",
+              "Ponchado cadena decorativa",
+              "Medida louvers",
+              "Tipo de riel",
+              "Posicion correcta control de riel",
+              "Tipo correcto de control de riel",
+              "Agrupado de riel",
+              "Cantidad de carritos agrupado",
+              "Etiquetas warning de riel",
+              "Presencia de cord guide",
+              "Presencia de retornos",
+              "Medida de retornos",
+              "Medida de valance",
+              "Tipo de valance",
+              "Persiana completa de acuerdo a WT"]
+
+        #workbook = xlsxwriter.Workbook('R.xlsx')
+        workbook = Workbook(me.pathsal.get()+"\\"+me.nombreRep.get())
+        worksheet = workbook.add_worksheet()
+
+
+        nf = workbook.add_format({'border':1})
+
+        rtf = workbook.add_format({'border': 1})
+        rtf.set_rotation(90)
+
+        gf = workbook.add_format({'border':1})
+        gf.set_pattern(1)
+        green = me.getColor("green.col")
+        print(green)
+        #gf.set_bg_color(green)#  "#00FF00")
+        gf.set_bg_color("#008000")
+
+        red = me.getColor("red.col")
+        print(red)
+        rf = workbook.add_format({'border':1})
+        rf.set_pattern(1)
+        #rf.set_bg_color(red)# "#FF0000")
+        rf.set_bg_color("#FF0000")
+
+        Rs = len(qs)+1+1
+        Cs = 2 + len(data)
+
+
+        for r in range(Rs):
+            for c in range(Cs):
+                form = nf
+                if c==0:
+                    if r==0:
+                        s = "Num"
+                    elif r==Rs-1:
+                        worksheet.set_column(0,Cs-1)
+                        now = datetime.datetime.now()
+                        time = now.strftime("%d-%m-%Y -- %H:%M")
+                        s= "Reporte realizado el dia: " + time
+                        worksheet.write(r,c,s,form)
+                        break
+                    else:
+                        s = str(r)
+                elif c==1:
+                    if r==0:
+                        s = "Modos de falla"
+                    else:
+                        s = qs[r-1]
+                else:
+                    if r==0:
+                        s = data[c-2]["wt"]
+                        form = rtf
+                    else:
+                        s = str(data[c-2]["vals"][r-1])
+                        if s=="1":
+                            form = gf
+                        if s=="0":
+                            form = rf
+
+                worksheet.write(r,c,s,form)
+        workbook.close()
+        messagebox.showinfo("OK", "Reporte generado con exito")
+
+
+
+    def xls2pdf(me):
+        pass
+
+
+#App()
